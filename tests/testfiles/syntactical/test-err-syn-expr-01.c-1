@@ -1,0 +1,6 @@
+/* Syntaxtest: Fehlende Expression in Assignment */
+
+float blah() {
+	a = ;
+	return 0;
+}

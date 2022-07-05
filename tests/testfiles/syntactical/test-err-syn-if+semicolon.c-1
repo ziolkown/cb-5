@@ -1,0 +1,6 @@
+/* Syntaxtest: If-Anweisung: ein Semokolon zu viel */
+
+int blub() {
+	if (i = 0) j = 1;;
+	return 1;
+}

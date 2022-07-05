@@ -1,0 +1,10 @@
+/* Syntaxtest: Ungueltiges Assigment (Variable (ID) fehlt) */
+
+float blah() {
+	if (< blub()) {
+		if (b > blub()) {
+			printf(blub() + blub());
+		}
+	}
+	return 3.14159;
+}

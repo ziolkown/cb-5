@@ -1,0 +1,6 @@
+/* Syntaxtest: Expression */
+
+void main() {
+    int b = 1;
+    int a = -b;
+}

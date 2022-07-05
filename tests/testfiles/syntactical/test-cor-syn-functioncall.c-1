@@ -1,0 +1,10 @@
+/* Syntaxtest: Functioncall ohne Variable */
+
+int test() {
+	int c = 2;
+	return c;
+}
+
+void main() {
+	test();
+}

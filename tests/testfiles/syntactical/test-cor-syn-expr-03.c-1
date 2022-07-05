@@ -1,0 +1,7 @@
+/* Syntaxtest: Expression */
+
+void main() {
+    bool b = true;
+    bool c = false;
+	bool a = b || c;
+}

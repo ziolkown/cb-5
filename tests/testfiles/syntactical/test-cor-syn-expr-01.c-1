@@ -1,0 +1,8 @@
+/* Syntaxtest: Expression */
+
+bool a = false;
+
+void main() {
+    int c = 3;
+	a = 4 <= c;
+}

@@ -1,0 +1,8 @@
+/* Syntaxtest: Expression */
+
+void main() {
+    bool a;
+    bool b = true;
+    bool c = true;
+	a = b && c;
+}

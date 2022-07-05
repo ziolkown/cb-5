@@ -1,0 +1,7 @@
+float blah() {
+	return 3.14159;
+}
+
+float t = blah();
+
+void main() {}

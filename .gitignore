@@ -1,0 +1,5 @@
+/target
+/src/parser/minako_syntax.rs
+/Cargo.lock
+.idea/
+/src/parser/minako_syntax_dev.rs

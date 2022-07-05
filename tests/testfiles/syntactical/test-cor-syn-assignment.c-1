@@ -1,0 +1,7 @@
+/* Syntaxtest: Assignment */
+
+void main() {
+    int c = 0;
+    int b;
+	int a = b = c;
+}

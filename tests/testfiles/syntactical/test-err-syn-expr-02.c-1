@@ -1,0 +1,9 @@
+/* Syntaxtest: Zuweisung zu Funktion (Expression) */
+
+float blah() {
+	return 0;
+}
+
+void main() {
+	blah() = 2;
+}

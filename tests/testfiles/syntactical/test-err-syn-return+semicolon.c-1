@@ -1,0 +1,9 @@
+/* Syntaxtest: Returnstatement ohne Semikolon */
+
+int blub() {
+	blub1 = 23;
+	blub2 = 17;
+	blub3 = 42;
+	blub4 = blub1 * (blub2 + blub3);
+	return blub3
+}

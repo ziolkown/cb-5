@@ -69,11 +69,22 @@ start:
                             None => {return Err(self.report_semantic_error("void main() doesn't exist").unwrap_err())}
                             Some(symbol) => {
                                 if let SymbolClass::Function {parameters} = &symbol.symbol_class {
+                                    match &symbol.symbol_type {
+                                        SymbolType::Void => {
+                                        }
+                                        _ => {
+                                            return Err(self.report_semantic_error("main() must be of type void").unwrap_err())
+                                        }
+                                    }
+                                    if !parameters.is_empty() {
+                                        return Err(self.report_semantic_error("void main() cannot have parameters").unwrap_err())
+                                    }
                             		// TODO: Handle remaining main related semantic errors
                             	        // The `start` rule has a different return type than the other rules.
                             	        // Therefore the returned error has to be rewrapped with
                             	        // return Err(self.report_semantic_error("ERROR").unwrap_err())
                                 } else {
+                                    return Err(self.report_semantic_error("void main() doesn't exist").unwrap_err())
                                     // TODO: Handle remaining main related semantic errors
                                 }
 
@@ -115,7 +126,16 @@ program:
 functiondefinition:
 	type ID[name] {
 		let name = $name.unwrap_name();
-
+	    let symbol_type = $type.unwrap_type();
+		let symbol = self.symbol_table.function_symbol(name.clone(), symbol_type);
+		match self.symbol_table.insert(symbol) {
+		    Ok(_) => {
+		        self.symbol_table.enter_scope();
+		        }
+		    Err(_) => {
+				return self.report_semantic_error("function already defined");
+    			}
+		}
                 // TODO: Use symbol table
 
                 $$ = Value::Tree(function_node(name));
@@ -127,6 +147,9 @@ functiondefinition:
 	    }
 	    let body = $body.unwrap_tree();
 	    function_node.push_node(body);
+
+
+        self.symbol_table.leave_scope();
 
             // TODO: Use symbol table
 
@@ -161,6 +184,25 @@ parameterlist:
 parameter:
 	type ID[name] {
 		let name =$name.unwrap_name();
+		let symbol_type = $type.unwrap_type();
+		match symbol_type {
+		    SymbolType::Void => {
+		        return self.report_semantic_error("parameter cannot be of type void");
+		    }
+		    _ => {
+
+		    }
+		}
+        let symbol = self.symbol_table.parameter_symbol(name.clone(), symbol_type);
+        match self.symbol_table.insert(symbol) {
+            Ok(_) => {
+                self.symbol_table.parameter_symbol(name.clone(), symbol_type);
+                }
+            Err(_) => {
+                return self.report_semantic_error("incorrect parameter");
+                }
+        }
+
 		// TODO: Check parameter type
 	        // TODO: Use symbol table
 	        $$ = Tree(parameter_node(name));
@@ -182,15 +224,26 @@ functioncall:
 					let mut call_node = function_call_node(name.clone(), symbol.symbol_type);
 					let arg_node = $args.unwrap_tree();
 					let arg_types: Vec<SymbolType> = arg_node.children().iter().map(|c| c.value().symbol_type()).collect();
-
+                    if parameters.len() != arg_types.len() {
+                        let error = format!("{} arguments given, {} expected", arg_types.len(), parameters.len());
+                        return self.report_semantic_error(&error);
+                    }
+                    else {
+                        let mut arg_iter = arg_types.clone().into_iter();
+                        for param in parameters {
+                            if param.symbol_type != arg_iter.next().unwrap() {
+                                return self.report_semantic_error("incorrect argument type");
+                            }
+                        }
+                    }
 					// TODO: Compare parameters with arguments
-
-
 
 					call_node.push_node(arg_node);
 					$$ = Tree(call_node);
 				}
 				_ => {
+				    let error = format!("expected function, got {}", &symbol.symbol_class);
+				    return self.report_semantic_error(&error);
 					// TODO: Handle symbol being not a function
 				}
 			}
@@ -236,20 +289,24 @@ statementlist:
 
 block:
 	'{' {
+	self.symbol_table.enter_scope();
 	// TODO: Use symbol_table
 	$$ = Value::None;
 	}
 		statementlist[body]
 	'}' {
+	self.symbol_table.leave_scope();
 	// TODO: Use symbol_table
  	$$ = $body;
 	}
 
 body:
 	{
+	    self.symbol_table.enter_scope();
 		// TODO: Use symbol_table
 		$$ = Value::None;
 	} statement {
+	    self.symbol_table.leave_scope();
 		// TODO: Use symbol_table
 		$$ = $statement;
 	}
@@ -299,6 +356,14 @@ statement:
 ifstatement:
 	KW_IF '(' assignment[cond] ')' body[then] opt_else[else] {
 	let condition_node = $cond.unwrap_tree();
+	match condition_node.value().symbol_type() {
+        SymbolType::Boolean => {
+
+        }
+        _ => {
+            return self.report_semantic_error("condition must be boolean");
+        }
+	}
 	// TODO: Verify condition's type
 
 	let mut if_node = if_node();
@@ -335,6 +400,14 @@ forstatement:
 	let body_node = $body.unwrap_tree();
 
 
+	match cond_node.value().symbol_type() {
+        SymbolType::Boolean => {
+
+        }
+        _ => {
+            return self.report_semantic_error("condition must be boolean");
+        }
+	}
 	// TODO: Verify condition type
 
 	for_node.push_node(init_node);
@@ -359,6 +432,14 @@ forstatement:
 	let step_node = $step.unwrap_tree();
 	let body_node = $body.unwrap_tree();
 
+	match cond_node.value().symbol_type() {
+        SymbolType::Boolean => {
+
+        }
+        _ => {
+            return self.report_semantic_error("condition must be boolean");
+        }
+	}
 	// TODO: Verify condition type
 
 	for_node.push_node(init_node);
@@ -373,6 +454,15 @@ forstatement:
 dowhilestatement:
 	KW_DO body KW_WHILE '(' assignment[cond] ')' {
 	let condition_node = $cond.unwrap_tree();
+
+	match condition_node.value().symbol_type() {
+        SymbolType::Boolean => {
+
+        }
+        _ => {
+            return self.report_semantic_error("condition must be boolean");
+        }
+	}
 	// TODO: Verify condition type
 	$$ = combine(do_while_node(), Tree(condition_node), $body);
 	}
@@ -380,6 +470,15 @@ dowhilestatement:
 whilestatement:
 	KW_WHILE '(' assignment[cond] ')' body {
 	let condition_node = $cond.unwrap_tree();
+
+	match condition_node.value().symbol_type() {
+        SymbolType::Boolean => {
+
+        }
+        _ => {
+            return self.report_semantic_error("condition must be boolean");
+        }
+	}
 	// TODO: Verify condition type
 	$$ = combine(while_node(), Tree(condition_node), $body);
 	}
@@ -387,9 +486,15 @@ whilestatement:
 returnstatement:
 	KW_RETURN {
 	// It's a void return
-	if SymbolType::Void == self.symbol_table.function_type().unwrap() {
-	    $$ = Tree(return_node(SymbolType::Void));
+	match self.symbol_table.function_type().unwrap() {
+	    SymbolType::Void => {
+
+	    }
+	    _ => {
+            return self.report_semantic_error("return must be of type void");
+	    }
 	}
+	    $$ = Tree(return_node(SymbolType::Void));
 	// TODO: Handle invalid return type
 	}
 	| KW_RETURN assignment[expr] {
@@ -399,6 +504,8 @@ returnstatement:
 	let function_type = self.symbol_table.function_type().unwrap();
 
 	if !match_types(function_type, return_type) {
+	    let error = format!("expected return type {}, got {}", &function_type, &return_type);
+	    return self.report_semantic_error(&error);
 	    // TODO: Handle non-matching return types
 	} else if function_type != return_type {
 		// The assignment performs a type cast, e.g. int to float
@@ -424,6 +531,10 @@ printf:
 	KW_PRINTF '(' assignment[arg] ')'
 		{
 		let child = $arg.unwrap_tree();
+		if let SymbolType::Void = child.value().symbol_type() {
+		    let error = format!("type void not acceptable output");
+		    return self.report_semantic_error(&error);
+		}
 		// TODO: Handle printf argument type
 		let mut parent = print_node();
 		parent.push_node(child);
@@ -634,6 +745,8 @@ simpexpr:
 	    $$ = Tree(u_minus);
 	}
 	_ => {
+	    let error = format!("expected symbol type integer or float, got {}", tree.value().symbol_type());
+	    return self.report_semantic_error(&error);
 	    // TODO: Handle other types
 	}
 	}
@@ -673,6 +786,15 @@ simpexpr:
 			return self.report_semantic_error(&error);
 			}
 		    Some(symbol) => {
+		    	match &symbol.symbol_class {
+		    	    SymbolClass::Variable => {
+
+		    	    }
+		    	    _ => {
+		    	        // let error = format!("expected Variable, got {}", &symbol.symbol_class);
+		    	        // return self.report_semantic_error(&error);
+		    	    }
+		    	}
 		    	// TODO: Check for symbol class
 			$$ = Tree(variable_ref_node(name, symbol.symbol_type));
 		    }
